@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Notación científica · Actividad interactiva</title>
+<style>
+:root{--ind:#2b2d7a;--amb:#f2a900;--teal:#0f8b8d;--bg:#f7f8fc;--ok:#1d7a4a;--bad:#b3261e;--ink:#1c1f33;--line:#d9dcec}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.6 "Segoe UI",system-ui,-apple-system,sans-serif}
+header{background:var(--ind);color:#fff;padding:20px 16px 16px;text-align:center}
+header h1{margin:0 0 6px;font-size:1.15rem;font-weight:600;opacity:.9}
+.hero{font-size:clamp(2.2rem,9vw,3.6rem);font-weight:700;line-height:1.1}
+.hero .a{color:var(--amb)}.hero .b{color:#8fe3e4}
+.legend{display:flex;justify-content:center;gap:22px;flex-wrap:wrap;font-size:.85rem;margin-top:6px}
+.legend .a{color:var(--amb)}.legend .b{color:#8fe3e4}
+#who{font-size:.9rem;margin-top:8px;min-height:1.3em}
+nav{display:flex;max-width:920px;margin:0 auto;padding:10px 12px 0;gap:6px;flex-wrap:wrap}
+nav button{flex:1;min-width:110px}
+main{max-width:920px;margin:0 auto;padding:6px 12px 40px}
+button{font:inherit;cursor:pointer;border:2px solid var(--ind);background:#fff;color:var(--ind);padding:8px 14px;border-radius:8px}
+button:hover:not(:disabled){background:#eceefb}button:disabled{opacity:.5;cursor:not-allowed}
+button.on{background:var(--ind);color:#fff}button.pri{background:var(--teal);border-color:var(--teal);color:#fff}
+button:focus-visible,input:focus-visible{outline:3px solid var(--amb);outline-offset:2px}
+section.c{background:#fff;border:1px solid var(--line);border-left:6px solid var(--teal);border-radius:8px;padding:14px 16px;margin:14px 0}
+section.c h2,section.c h3{margin:0 0 8px;color:var(--ind)}
+.rule{background:#fff7de;border-left:5px solid var(--amb);padding:8px 12px;margin:8px 0;border-radius:4px}
+table{border-collapse:collapse;width:100%;font-size:.93rem}td,th{border:1px solid var(--line);padding:6px 8px;text-align:left;vertical-align:top}th{background:#eef0fa}
+.big{font-size:1.25rem;font-weight:700;color:var(--ind);word-break:break-all}
+.expr{display:inline-flex;align-items:center;gap:6px;font-size:1.15rem}
+input[type=text]{font:inherit;padding:8px;border:2px solid var(--ind);border-radius:8px;width:100%;max-width:480px}
+.expr input{width:110px}.expr sup input{width:64px;font-size:.9rem}
+.opt{display:block;width:100%;text-align:left;margin:6px 0;font-size:1.05rem}.opt.sel{background:#e0f3f3;border-color:var(--teal)}
+.opt.good{background:#d7f0df;border-color:var(--ok)}.opt.bad{background:#f8d9d6;border-color:var(--bad)}
+.ok{color:var(--ok);font-weight:700}.no{color:var(--bad);font-weight:700}
+.tabs{display:flex;gap:6px;flex-wrap:wrap;margin:10px 0}.tabs button{font-size:.9rem;padding:6px 10px}
+.bar{height:10px;background:#dfe2f2;border-radius:6px;overflow:hidden}.bar i{display:block;height:100%;background:var(--teal)}
+.small{font-size:.85rem;color:#4a4f6a}.fb{margin-top:10px}
+.name{display:inline-block;background:var(--amb);color:#1c1f33;padding:2px 10px;border-radius:6px;font-weight:700}
+@media(prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<header><h1>Notación científica</h1>
+<div class="hero"><span class="a">4.52</span> × <span class="b">10<sup>−3</sup></span></div>
+<div class="legend"><span class="a">coeficiente a, con 1 ≤ a &lt; 10</span><span class="b">potencia de 10 con exponente entero n</span></div>
+<div id="who"></div></header>
+<nav id="nav"></nav><main id="app"></main>
+<script>
+const $=s=>document.querySelector(s);
+const rnd=(a,b)=>a+Math.floor(Math.random()*(b-a+1));
+const pick=a=>a[rnd(0,a.length-1)];
+const shuf=a=>{a=[...a];for(let i=a.length-1;i>0;i--){const j=rnd(0,i);[a[i],a[j]]=[a[j],a[i]]}return a};
+const mn=n=>n<0?"−"+(-n):""+n;
+const E=(a,n)=>`${a} × 10<sup>${mn(n)}</sup>`;
+const f=x=>String(+x.toFixed(6));
+const trim=s=>s.includes(".")?s.replace(/0+$/,"").replace(/\.$/,""):s;
+const clean=s=>s.replace(/[\s,\u00a0]/g,"");
+function stdStr(a,n){const[i,fr=""]=a.split(".");const d=i+fr,p=i.length+n;let r;
+ if(p<=0)r="0."+"0".repeat(-p)+d;else if(p>=d.length)r=d+"0".repeat(p-d.length);else r=d.slice(0,p)+"."+d.slice(p);return trim(r)}
+function group(s){let[i,fr=""]=s.split(".");i=i.replace(/\B(?=(\d{3})+(?!\d))/g,"\u00a0");fr=fr.replace(/(\d{3})(?=\d)/g,"$1\u00a0");return fr?i+"."+fr:i}
+function normNum(s){s=clean(s);if(!/^(\d+\.?\d*|\.\d+)$/.test(s))return null;s=trim(s).replace(/^0+(?=\d)/,"");return s.startsWith(".")?"0"+s:s}
+function normSci(p,e){while(p>=10){p/=10;e++}while(p<1){p*=10;e--}return{a:+p.toFixed(6),n:e}}
+const mant=()=>{const t=rnd(0,2);return String(t===0?rnd(1,9):t===1?rnd(11,99)/10:rnd(101,999)/100)};
+const sgn=()=>Math.random()<.5?1:-1;
+
+/* ---------- GENERADORES ---------- */
+function qStdToSci(){const a=mant(),n=sgn()*rnd(3,9),s=stdStr(a,n);
+ return{kind:"sci",p:`Escribe en notación científica:<div class="big">${group(s)}</div>`,exp:{a:+a,n},
+ ex:`Coloca el punto después de la primera cifra distinta de cero (${a}). Lo moviste ${Math.abs(n)} lugares a la ${n>0?"izquierda, así que el exponente es positivo":"derecha, así que el exponente es negativo"}. Resultado: ${E(a,n)}.`}}
+function qSciToStd(){const a=mant(),n=sgn()*rnd(2,7),s=stdStr(a,n);
+ return{kind:"num",p:`Escribe con todas sus cifras, sin notación científica (no hace falta separar con espacios):<div class="big">${E(a,n)}</div>`,exp:s,
+ ex:`El exponente ${mn(n)} indica mover el punto ${Math.abs(n)} lugares a la ${n>0?"derecha":"izquierda"}, agregando ceros si hace falta. Resultado: ${group(s)}.`}}
+function qIdentify(){let a;do{a=rnd(11,99)/10}while(a%1===0);const n=sgn()*rnd(3,8);
+ const o=[{h:E(a,n),ok:true},{h:E(f(a*10),n-1)},{h:E(f(a/10),n+1)},{h:E(f(a*100),n-2)}];
+ return{kind:"mc",p:"¿Cuál número está escrito <b>correctamente</b> en notación científica?",opts:shuf(o),
+ ex:`Solo ${E(a,n)} cumple que el coeficiente está entre 1 y 10. Las otras opciones valen lo mismo, pero su coeficiente no cumple 1 ≤ a &lt; 10.`}}
+function qCompare(){let a,b,n,m;do{a=rnd(11,99)/10;b=rnd(11,99)/10;n=rnd(-8,8);m=n+pick([0,1,-1,2,-2])}while(n===m&&a===b);
+ const may=Math.random()<.5,aBig=n!==m?n>m:a>b;
+ return{kind:"mc",p:`¿Cuál número es <b>${may?"mayor":"menor"}</b>?`,opts:[{h:E(a,n),ok:aBig===may},{h:E(b,m),ok:aBig!==may}],
+ ex:n!==m?`Los dos coeficientes están entre 1 y 10, así que se comparan primero los exponentes: ${mn(n)} ${n>m?">":"<"} ${mn(m)}. Recuerda que con negativos, −3 es mayor que −5.`:`Tienen el mismo exponente, así que se comparan los coeficientes: ${a} ${a>b?">":"<"} ${b}.`}}
+function qMul(){const a=rnd(12,99)/10,b=rnd(12,99)/10,n=rnd(-6,7),m=rnd(-6,7),pr=a*b,r=normSci(pr,n+m);
+ return{kind:"sci",p:`Multiplica y deja el resultado en notación científica (sin redondear):<div class="big">(${E(a,n)}) · (${E(b,m)})</div>`,exp:r,
+ ex:`Multiplica coeficientes: ${a} · ${b} = ${f(pr)}. Suma exponentes: ${mn(n)} + ${mn(m)} = ${mn(n+m)}. ${pr>=10?`Como ${f(pr)} es mayor o igual que 10, lo ajustas: ${f(pr)} × 10<sup>${mn(n+m)}</sup> = `:"Resultado: "}${E(r.a,r.n)}.`}}
+function qDiv(){const q=rnd(11,40)/10,b=rnd(11,24)/10,a=+(q*b).toFixed(2),n=rnd(-5,8),m=rnd(-5,8),r=normSci(a/b,n-m);
+ return{kind:"sci",p:`Divide y deja el resultado en notación científica:<div class="big">(${E(a,n)}) ÷ (${E(b,m)})</div>`,exp:r,
+ ex:`Divide coeficientes: ${a} ÷ ${b} = ${r.a}. Resta exponentes: ${mn(n)} − (${mn(m)}) = ${mn(n-m)}. Resultado: ${E(r.a,r.n)}.`}}
+function qAdd(){const sub=Math.random()<.5,a=rnd(20,99)/10,b=rnd(11,99)/10,n=rnd(-5,8),v=sub?a-b/10:a+b/10,r=normSci(v,n);
+ return{kind:"sci",p:`${sub?"Resta":"Suma"} y deja el resultado en notación científica:<div class="big">(${E(a,n)}) ${sub?"−":"+"} (${E(b,n-1)})</div>`,exp:r,
+ ex:`Primero iguala exponentes: ${E(b,n-1)} = ${f(b/10)} × 10<sup>${mn(n)}</sup>. Luego ${sub?"resta":"suma"} los coeficientes: ${a} ${sub?"−":"+"} ${f(b/10)} = ${f(v)}. Resultado: ${E(r.a,r.n)}.`}}
+const CT=[["La masa de la Tierra es aproximadamente","5.972",24,"kg"],["La masa del electrón es aproximadamente","9.109",-31,"kg"],["El número de Avogadro es aproximadamente","6.022",23,"partículas por mol"],["La velocidad de la luz en el vacío es aproximadamente","2.998",8,"m/s"],["La distancia promedio de la Tierra al Sol es aproximadamente","1.496",8,"km"],["La carga del electrón (en valor absoluto) es aproximadamente","1.602",-19,"C"],["El radio de Bohr del átomo de hidrógeno es aproximadamente","5.292",-11,"m"],["El radio medio de la Tierra es aproximadamente","6.371",6,"m"]];
+function qContext(){const[t,a,n,u]=pick(CT);return{kind:"sci",p:`${t}<div class="big">${group(stdStr(a,n))} ${u}</div>Exprésalo en notación científica.`,exp:{a:+a,n},
+ ex:`El punto se mueve ${Math.abs(n)} lugares a la ${n>0?"izquierda":"derecha"}: ${E(a,n)} ${u}.`}}
+
+/* ---------- WIDGET Y REVISIÓN ---------- */
+function widget(q){if(q.kind==="sci")return`<span class="expr"><input type="text" id="ia" inputmode="decimal" aria-label="coeficiente" placeholder="a"> × 10<sup><input type="text" id="in" inputmode="numeric" aria-label="exponente" placeholder="n"></sup></span>`;
+ if(q.kind==="num")return`<input type="text" id="iv" inputmode="decimal" aria-label="respuesta">`;
+ return q.opts.map((o,i)=>`<button class="opt" data-i="${i}">${o.h}</button>`).join("")}
+function bindMc(q){q._sel=null;document.querySelectorAll(".opt").forEach(b=>b.onclick=()=>{q._sel=+b.dataset.i;document.querySelectorAll(".opt").forEach(x=>x.classList.toggle("sel",x===b))})}
+function read(q){if(q.kind==="sci")return{a:$("#ia").value.trim().replace(",","."),n:$("#in").value.trim().replace("−","-")};
+ if(q.kind==="num")return $("#iv").value.trim();return q._sel}
+const empty=(q,r)=>q.kind==="sci"?(!r.a||!r.n):q.kind==="num"?!r:r===null;
+function judge(q,r){if(q.kind==="sci"){const a=parseFloat(r.a);return isFinite(a)&&/^-?\d+$/.test(r.n)&&Math.abs(a-q.exp.a)<1e-6&&+r.n===q.exp.n}
+ if(q.kind==="num")return normNum(r)===q.exp;return q.opts[r].ok}
+const shown=(q,r)=>q.kind==="sci"?`${r.a} × 10<sup>${r.n}</sup>`:q.kind==="num"?(r||"—"):q.opts[r].h;
+const right=q=>q.kind==="sci"?E(q.exp.a,q.exp.n):q.kind==="num"?group(q.exp):q.opts.find(o=>o.ok).h;
+
+/* ---------- VISTAS ---------- */
+function vTeoria(){$("#app").innerHTML=`
+<section class="c"><h2>¿Qué es la notación científica?</h2><p>Es una forma de escribir números muy grandes o muy pequeños usando potencias de 10. Un número está en notación científica cuando tiene la forma <b>a × 10<sup>n</sup></b>, donde <b>1 ≤ a &lt; 10</b> y <b>n</b> es un número entero (Stewart et al., 2017). Se usa mucho en física y química porque las magnitudes van desde lo diminuto de un átomo hasta lo enorme de una distancia astronómica (Serway y Jewett, 2019).</p></section>
+<section class="c"><h2>Cómo escribir un número en notación científica</h2>
+<ol><li>Coloca el punto decimal después de la <b>primera cifra distinta de cero</b>. Ese número es el coeficiente <i>a</i>.</li><li>Cuenta cuántos lugares moviste el punto. Ese conteo es el valor de <i>n</i>.</li><li>Decide el signo: si el número original es <b>grande</b> (mayor o igual que 10), el exponente es <b>positivo</b>; si es <b>menor que 1</b>, el exponente es <b>negativo</b>.</li></ol>
+<div class="rule">Para volver a la forma decimal haces lo contrario: exponente positivo → punto a la derecha; exponente negativo → punto a la izquierda.</div></section>
+<section class="c"><h2>Operaciones</h2><table>
+<tr><th>Operación</th><th>Regla</th></tr>
+<tr><td>Multiplicación</td><td>(a × 10<sup>n</sup>)(b × 10<sup>m</sup>) = (a·b) × 10<sup>n+m</sup></td></tr>
+<tr><td>División</td><td>(a × 10<sup>n</sup>) ÷ (b × 10<sup>m</sup>) = (a÷b) × 10<sup>n−m</sup></td></tr>
+<tr><td>Suma y resta</td><td>Primero iguala los exponentes y luego opera los coeficientes: a × 10<sup>n</sup> ± b × 10<sup>n</sup> = (a ± b) × 10<sup>n</sup></td></tr></table>
+<div class="rule"><b>Normaliza al final:</b> si el coeficiente queda fuera de 1 ≤ a &lt; 10, muévele el punto y ajusta el exponente. Ejemplo: 12 × 10<sup>9</sup> = 1.2 × 10<sup>10</sup>.</div></section>
+<section class="c"><h2>Errores comunes</h2><ul><li><b>42 × 10<sup>3</sup></b> no está en notación científica, porque 42 es mayor que 10. Debe ser 4.2 × 10<sup>4</sup>.</li><li><b>10<sup>−3</sup> es mayor que 10<sup>−5</sup></b>, porque −3 &gt; −5.</li><li>Un número menor que 1 <b>no</b> lleva exponente positivo.</li></ul></section>
+<section class="c small"><h3>Referencias (APA)</h3>Serway, R. A., y Jewett, J. W. (2019). <i>Physics for scientists and engineers with modern physics</i> (10.ª ed.). Cengage Learning.<br>Stewart, J., Redlin, L., y Watson, S. (2017). <i>Precálculo: Matemáticas para el cálculo</i> (7.ª ed.). Cengage Learning.</section>`}
+
+function toSci(s){s=clean(s);const neg=s[0]==="-";if(neg)s=s.slice(1);if(!/^(\d+\.?\d*|\.\d+)$/.test(s))return null;
+ const[i,fr=""]=s.split("."),d=i+fr,k=d.search(/[1-9]/);if(k<0)return{zero:1};
+ const e=i.length-k-1,m=d.slice(k).replace(/0+$/,"");return{a:(neg?"-":"")+m[0]+(m.length>1?"."+m.slice(1):""),n:e}}
+function vEjemplos(){$("#app").innerHTML=`
+<section class="c"><h2>Convertidor con pasos</h2><p>Escribe cualquier número (por ejemplo 0.0000457 o 3250000) y observa cómo se mueve el punto. <span class="small">Intenta primero hacerlo en tu libreta y después compáralo.</span></p>
+<input type="text" id="cv" inputmode="decimal" placeholder="Escribe un número"> <button class="pri" id="cb">Convertir</button><div class="fb" id="cr"></div></section>
+<section class="c"><h2>Ejemplos resueltos</h2><table>
+<tr><th>Problema</th><th>Solución</th></tr>
+<tr><td>Escribe 45 000 000 en notación científica</td><td>El punto se mueve 7 lugares a la izquierda → <b>4.5 × 10<sup>7</sup></b></td></tr>
+<tr><td>Escribe 0.00032 en notación científica</td><td>El punto se mueve 4 lugares a la derecha → <b>3.2 × 10<sup>−4</sup></b></td></tr>
+<tr><td>(3 × 10<sup>4</sup>)(4 × 10<sup>5</sup>)</td><td>3·4 = 12 y 4+5 = 9 → 12 × 10<sup>9</sup> = <b>1.2 × 10<sup>10</sup></b></td></tr>
+<tr><td>(6 × 10<sup>8</sup>) ÷ (2 × 10<sup>3</sup>)</td><td>6÷2 = 3 y 8−3 = 5 → <b>3 × 10<sup>5</sup></b></td></tr>
+<tr><td>2.5 × 10<sup>4</sup> + 3 × 10<sup>3</sup></td><td>3 × 10<sup>3</sup> = 0.3 × 10<sup>4</sup>; luego 2.5 + 0.3 = 2.8 → <b>2.8 × 10<sup>4</sup></b></td></tr></table></section>
+<section class="c"><h2>Magnitudes reales</h2><table><tr><th>Magnitud</th><th>Valor aproximado</th></tr>
+${CT.map(([t,a,n,u])=>`<tr><td>${t.replace(" es aproximadamente","").replace(" (en valor absoluto)","")}</td><td>${E(a,n)} ${u}</td></tr>`).join("")}</table>
+<p class="small">Valores tomados de Serway y Jewett (2019).</p></section>`;
+ const go=()=>{const r=toSci($("#cv").value);let h;
+  if(!r)h='<span class="no">Escribe solo un número, por ejemplo 0.0045 o 123000.</span>';
+  else if(r.zero)h="El cero no se escribe en notación científica.";
+  else h=`<div class="big">${E(r.a,r.n)}</div>${r.n===0?"El número ya tiene el coeficiente entre 1 y 10, así que el exponente es 0.":`Moviste el punto <b>${Math.abs(r.n)}</b> lugares a la <b>${r.n>0?"izquierda":"derecha"}</b>, por eso el exponente es <b>${mn(r.n)}</b>.`}`;
+  $("#cr").innerHTML=h};$("#cb").onclick=go;$("#cv").onkeydown=e=>{if(e.key==="Enter")go()}}
+
+const EX=[["Pasar a notación científica",qStdToSci],["Pasar a forma decimal",qSciToStd],["¿Está bien escrito?",qIdentify],["Mayor o menor",qCompare],["Multiplicar y dividir",()=>Math.random()<.5?qMul():qDiv()],["Sumar y restar",qAdd],["Datos reales",qContext]];
+let exT=0,exQ=null,st={ok:0,n:0};
+function vEj(){$("#app").innerHTML=`<section class="c"><h2>Ejercicios de práctica</h2><p>Resuelve en tu libreta y luego captura tu respuesta. Los números cambian cada vez. <b>Puedes practicar las veces que quieras.</b></p>
+<div class="tabs">${EX.map((x,i)=>`<button data-t="${i}" class="${i===exT?"on":""}">${x[0]}</button>`).join("")}</div>
+<div class="small" id="stt"></div><div id="qa"></div></section>`;
+ document.querySelectorAll(".tabs button").forEach(b=>b.onclick=()=>{exT=+b.dataset.t;vEj()});newEx()}
+function newEx(){exQ=EX[exT][1]();const q=exQ;$("#stt").textContent=`Aciertos: ${st.ok} de ${st.n} intentos`;
+ $("#qa").innerHTML=`<p>${q.p}</p><div>${widget(q)}</div><div class="fb"><button class="pri" id="ck">Comprobar</button></div><div class="fb" id="fb"></div>`;
+ if(q.kind==="mc")bindMc(q);
+ const go=()=>{const r=read(q);if(empty(q,r)){$("#fb").innerHTML='<span class="no">Escribe o elige una respuesta.</span>';return}
+  const ok=judge(q,r);st.n++;if(ok)st.ok++;$("#stt").textContent=`Aciertos: ${st.ok} de ${st.n} intentos`;
+  $("#fb").innerHTML=`${ok?'<span class="ok">¡Correcto!</span>':'<span class="no">Todavía no.</span> La respuesta es: '+right(q)}<p>${q.ex}</p><button class="pri" id="nx">Siguiente ejercicio</button>`;
+  $("#ck").disabled=true;document.querySelectorAll("#qa input,.opt").forEach(x=>x.disabled=true);$("#nx").onclick=newEx};
+ $("#ck").onclick=go;document.querySelectorAll("#qa input").forEach(i=>i.onkeydown=e=>{if(e.key==="Enter")go()})}
+
+/* ---------- EVALUACIÓN ---------- */
+let name="",ev=null;
+const EVQ=[qStdToSci,qStdToSci,qSciToStd,qSciToStd,qIdentify,qCompare,qMul,qDiv,qAdd,qContext];
+function vEval(){
+ if(!name){$("#app").innerHTML=`<section class="c"><h2>Evaluación</h2><p>Escribe tu nombre completo, empezando por apellidos. Aparecerá en tu evaluación y en tu resultado.</p>
+ <input type="text" id="nm" placeholder="Apellido paterno, apellido materno, nombre(s)" autocomplete="name"> <button class="pri" id="ok">Continuar</button><div class="fb" id="er"></div></section>`;
+  const go=()=>{const v=$("#nm").value.trim().replace(/\s+/g," ");if(v.split(" ").length<3){$("#er").innerHTML='<span class="no">Escribe apellido paterno, apellido materno y nombre(s).</span>';return}
+   name=v;$("#who").innerHTML=`Alumno(a): <span class="name">${name}</span>`;vEval()};$("#ok").onclick=go;$("#nm").onkeydown=e=>{if(e.key==="Enter")go()};return}
+ if(!ev){$("#app").innerHTML=`<section class="c"><h2>Evaluación de <span class="name">${name}</span></h2><ul><li>10 preguntas, una sola oportunidad por pregunta.</li><li>No verás si acertaste hasta el final.</li><li>Ten lista tu libreta y lápiz; las operaciones se hacen a mano.</li><li>Cada pregunta vale 1 punto. Se aprueba con 6 o más.</li></ul><button class="pri" id="st">Comenzar</button></section>`;
+  $("#st").onclick=()=>{ev={qs:EVQ.map(g=>g()),i:0,r:[]};vEval()};return}
+ if(ev.i>=ev.qs.length){vRes();return}
+ const q=ev.qs[ev.i];
+ $("#app").innerHTML=`<section class="c"><div class="small">Alumno(a): <span class="name">${name}</span> · Pregunta ${ev.i+1} de ${ev.qs.length}</div><div class="bar"><i style="width:${ev.i/ev.qs.length*100}%"></i></div>
+ <p>${q.p}</p><div>${widget(q)}</div><div class="fb"><button class="pri" id="nx">${ev.i===ev.qs.length-1?"Terminar evaluación":"Siguiente"}</button></div><div class="fb" id="fb"></div></section>`;
+ if(q.kind==="mc")bindMc(q);
+ const go=()=>{const r=read(q);if(empty(q,r)){$("#fb").innerHTML='<span class="no">Responde antes de continuar.</span>';return}ev.r.push(r);ev.i++;vEval()};
+ $("#nx").onclick=go;document.querySelectorAll("#app input").forEach(i=>i.onkeydown=e=>{if(e.key==="Enter")go()})}
+function vRes(){const ok=ev.qs.map((q,i)=>judge(q,ev.r[i])),sc=ok.filter(Boolean).length;
+ const msg=sc>=9?"Excelente dominio del tema.":sc>=6?"Aprobado. Repasa los ejercicios donde fallaste.":"Aún necesitas practicar. Repasa la teoría y vuelve a intentarlo.";
+ $("#app").innerHTML=`<section class="c"><h2>Resultado de la evaluación</h2><p>Alumno(a): <span class="name">${name}</span><br>Fecha: ${new Date().toLocaleDateString("es-MX",{day:"numeric",month:"long",year:"numeric"})}</p>
+ <div class="big">Calificación: ${sc} / ${ev.qs.length}</div><p>${msg}</p><p class="small">Toma una captura de pantalla de esta pantalla y entrégala a tu docente.</p></section>
+ <section class="c"><h3>Revisión</h3><table><tr><th>#</th><th>Tu respuesta</th><th>Respuesta correcta</th></tr>
+ ${ev.qs.map((q,i)=>`<tr><td>${i+1} ${ok[i]?"✔":"✘"}</td><td class="${ok[i]?"ok":"no"}">${shown(q,ev.r[i])}</td><td>${right(q)}${ok[i]?"":`<div class="small">${q.ex}</div>`}</td></tr>`).join("")}</table>
+ <p><button class="pri" id="rp">Intentar con nuevos números</button></p></section>`;
+ $("#rp").onclick=()=>{ev=null;vEval()}}
+
+/* ---------- NAVEGACIÓN ---------- */
+const V=[["Teoría",vTeoria],["Ejemplos",vEjemplos],["Ejercicios",vEj],["Evaluación",vEval]];let cur=0;
+function nav(){$("#nav").innerHTML=V.map((v,i)=>`<button data-i="${i}" class="${i===cur?"on":""}">${v[0]}</button>`).join("");
+ $("#nav").onclick=e=>{const b=e.target.closest("button");if(!b)return;cur=+b.dataset.i;nav();V[cur][1]();window.scrollTo(0,0)}}
+nav();vTeoria();
+</script>
+</body>
+</html>
